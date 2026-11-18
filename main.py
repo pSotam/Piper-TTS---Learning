@@ -12,16 +12,13 @@ def processar_texto(texto):
         return "I'm doing great! Thanks for asking."
 
     elif "your name" in texto:
-        return "My name is Aether."
+        return "My name is Jarvis."
+
+    elif "daddy's home" in texto:
+            return "Such a pleasure to meet you again, sir. What do we have for today?"
 
     elif "are you tired" in texto:
             return "I cannot get tired, I'm always ready for work, sir!"
-
-    elif "send kisses to people in the theater group chat" in texto:
-                return "Kisses, Villa Theater!"
-
-    elif "get my dick soft" in texto:
-        return "Playing now: Back in black by A C D C"
 
     else:
         return "Sorry, I didn't understand that."
