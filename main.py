@@ -1,52 +1,52 @@
-
-import subprocess
-import sys
-from pathlib import Path
-from audiotest import playaudio
+from STT import ouvir
+from talking import converter_texto_para_voz
 
 
-def converter_texto_para_voz(nome, conteudo, voz):
-    print("Convertendo texto para voz...")
+def processar_texto(texto):
+    texto = texto.lower()
 
-    arquivo_saida = Path(f"{nome}.wav")
+    if "hello" in texto:
+        return "Hello! How are you?"
 
-    try:
-        processo = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "piper",
-                "-m",
-                voz,
-                "-f",
-                str(arquivo_saida),
-            ],
-            input=conteudo,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            check=True
-        )
+    elif "how are you" in texto:
+        return "I'm doing great! Thanks for asking."
 
-        print(f"Áudio criado com sucesso: {arquivo_saida.resolve()}")
-        playaudio()
+    elif "your name" in texto:
+        return "My name is Aether."
 
-    except subprocess.CalledProcessError as erro:
-        print("Erro ao executar o Piper:")
-        print("Código:", erro.returncode)
-        print("STDOUT:", erro.stdout)
-        print("STDERR:", erro.stderr)
+    elif "are you tired" in texto:
+            return "I cannot get tired, I'm always ready for work, sir!"
 
-    except FileNotFoundError as erro:
-        print("Arquivo ou executável não encontrado:", erro)
+    elif "send kisses to people in the theater group chat" in texto:
+                return "Kisses, Villa Theater!"
+
+    elif "get my dick soft" in texto:
+        return "Playing now: Back in black by A C D C"
+
+    else:
+        return "Sorry, I didn't understand that."
 
 
 def main():
-    nome = "audio"
-    conteudo = str(input('Digite o que o Aether vai dizer: '))
-    voz = "pt_BR-faber-medium.onnx"
+    texto = ouvir()
 
-    converter_texto_para_voz(nome, conteudo, voz)
+    if not texto:
+        print("Nenhuma fala reconhecida.")
+        return
+
+    print("Você disse:", texto)
+
+    resposta = processar_texto(texto)
+
+    print("Aether:", resposta)
+
+    voz = "en_GB-alan-medium.onnx"
+
+    converter_texto_para_voz(
+        "resposta",
+        resposta,
+        voz
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-
 import queue
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
@@ -8,59 +7,73 @@ import audioop
 
 SAMPLE_RATE = 16000
 TEMPO_SILENCIO = 3
-LIMIAR = 500
-
-q = queue.Queue()
-
-def callback(indata, frames, time_info, status):
-    q.put(bytes(indata))
-
+TEMPO_MAXIMO = 15
+LIMIAR = 1000
 
 modelo = Model("vosk-model-small-en-us-0.15")
-reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE)
 
-print("Aether está ouvindo...")
 
-ultimo_som = time.monotonic()
-texto_completo = []
+def ouvir():
+    q = queue.Queue()
 
-try:
-    with sd.RawInputStream(
-        samplerate=SAMPLE_RATE,
-        blocksize=4000,
-        dtype="int16",
-        channels=1,
-        callback=callback
-    ):
+    def callback(indata, frames, time_info, status):
+        q.put(bytes(indata))
 
-        while True:
-            data = q.get()
+    reconhecedor = KaldiRecognizer(modelo, SAMPLE_RATE)
 
-            # Mede o volume do áudio
-            volume = audioop.rms(data, 2)
+    print("Aether está ouvindo...")
 
-            if volume > LIMIAR:
-                ultimo_som = time.monotonic()
+    inicio = time.monotonic()
+    ultimo_som = None
+    texto_completo = []
 
-            # Envia o áudio para o Vosk
-            if reconhecedor.AcceptWaveform(data):
-                resultado = json.loads(reconhecedor.Result())
-                texto = resultado.get("text", "")
+    try:
+        with sd.RawInputStream(
+            samplerate=SAMPLE_RATE,
+            blocksize=4000,
+            dtype="int16",
+            channels=1,
+            callback=callback
+        ):
 
-                if texto:
-                    texto_completo.append(texto)
+            while True:
+                # Evita ficar preso esperando áudio indefinidamente
+                try:
+                    data = q.get(timeout=0.5)
+                except queue.Empty:
+                    continue
 
-            # Verifica se passaram 3 segundos de silêncio
-            if time.monotonic() - ultimo_som >= TEMPO_SILENCIO:
-                break
+                volume = audioop.rms(data, 2)
 
-    resultado = json.loads(reconhecedor.FinalResult())
-    texto = resultado.get("text", "")
+                if volume > LIMIAR:
+                    ultimo_som = time.monotonic()
 
-    if texto:
-        texto_completo.append(texto)
+                if reconhecedor.AcceptWaveform(data):
+                    resultado = json.loads(reconhecedor.Result())
+                    texto = resultado.get("text", "")
 
-    print("Você disse:", " ".join(texto_completo))
+                    if texto:
+                        texto_completo.append(texto)
 
-except KeyboardInterrupt:
-    print("\nEscuta interrompida.")
+                agora = time.monotonic()
+
+                # Encerra se não houver fala dentro do tempo máximo
+                if agora - inicio >= TEMPO_MAXIMO and ultimo_som is None:
+                    break
+
+                # Encerra após 3 segundos de silêncio depois da fala
+                if ultimo_som is not None:
+                    if agora - ultimo_som >= TEMPO_SILENCIO:
+                        break
+
+        resultado = json.loads(reconhecedor.FinalResult())
+        texto = resultado.get("text", "")
+
+        if texto:
+            texto_completo.append(texto)
+
+        return " ".join(texto_completo)
+
+    except KeyboardInterrupt:
+        print("\nEscuta interrompida.")
+        return ""
